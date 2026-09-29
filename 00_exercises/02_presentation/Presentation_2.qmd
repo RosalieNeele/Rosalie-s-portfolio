@@ -1,0 +1,182 @@
+---
+title: "Critical Role"
+author: 
+  - name: Rosalie Neele
+    orcid: 0009-0007-1742-3578
+format: 
+  revealjs:
+    theme: [serif]
+    progress: true
+    logo: "images/uu_logo.png"
+    echo: false
+    bibliography: references.bib
+editor: source
+---
+
+```{r library}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(plotly, warn.conflicts = F)
+library(DT)
+
+```
+
+
+```{r data}
+#| echo: false
+#| cache: true
+
+data <- read_csv("data/criticalrole.csv", show_col_types = F)
+show <- read_csv("data/show info.csv", show_col_types = F)
+info <- read_csv("data/info.csv", show_col_types = F)
+
+```
+
+
+# Introduction {.smaller}
+
+::: columns
+::: {.column width=75%}
+
+Critical Role is a weekly web series of a group of voice actors who play Dungeons & Dragons 
+[@wiki; @critrole].
+
+- 4 main campaigns (or seasons)
+- \> 1000 hours of screen time
+- Kickstarter:
+  - The Legend of Vox Machina (based on Campaign 1)
+  - The Mighty Nein (based on Campaign 2)
+- Etc.
+- More info...
+
+:::
+::: {.column width=25%}
+
+```{r figures}
+#| echo: false
+
+fig1 <- paste0("https://image.tmdb.org/t/p/original/", show$poster)
+fig2 <- paste0("https://image.tmdb.org/t/p/original/", show$backdrop)
+
+```
+
+![*Note.* From @tmdb.](`r fig1`)
+
+:::
+:::
+
+## Cast {.smaller}
+
+![Note. From @tmdb.](`r fig2`){fig-align="center"}
+
+
+
+
+## D&D {.smaller}
+
+- TTRPG (Table Top Role Playing Game)
+- Some info about Dungeons & Dragons
+- Other popular D&D shows (Dimension 20, etc.)
+- ...
+
+
+# Data {.smaller}
+
+All plots and tables on the following slides were created using the following datasets. 
+
+```{r data show}
+#| echo: true
+#| eval: false
+
+data <- read_csv("data/criticalrole.csv", show_col_types = F)
+info <- read_csv("data/info.csv", show_col_types = F)
+
+```
+
+## Campaigns {.smaller}
+This interactive plot gives an overview of the number of episodes and the amount of hours per
+campaign (or season). Note that Campaign 4 is ongoing.
+
+```{r plot}
+#| echo: false
+#| fig-align: center
+
+p <- info |> 
+  pivot_longer(cols = c("Episodes", "Runtime"), names_to = "type", values_to = "value") |> 
+  mutate(text = case_when(type == "Episodes" ~ paste0("Number of episodes: ", value),
+                          type == "Runtime"  ~ paste0("Runtime: ", value, " hours")),
+         type = case_when(type == "Episodes" ~ "Number of episodes",
+                          type == "Runtime" ~ "Runtime (in hours)")) |> 
+  ggplot(aes(Campaign, value, fill = type, text = text)) + 
+    geom_col(position = "dodge") +
+    labs(y = NULL, fill = NULL) +
+    theme_minimal() + 
+    theme(legend.position = "top",
+          plot.background = element_rect(fill = "transparent"),
+          panel.background = element_rect(fill = "transparent"),
+          panel.grid.major.y = element_line(color = "gray60", linewidth = 0.4),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor = element_blank()) +
+  scale_fill_manual(values = c("#B66353FF", "#A2CEAAFF")) 
+
+ggplotly(p, tooltip = c("Campaign", "text"))
+
+```
+
+
+## My data {.smaller}
+I have previously gathered my own watch history data on Critical Role and have calculated 
+the number of episodes and amount of hours I watched per day for each campaign.
+
+```{r table}
+#| echo: false
+#| layout-ncol: 1
+#| height: auto
+
+data |> 
+  mutate(days = as.numeric(as.Date(end, format = "%d/%m/%Y") - 
+                             as.Date(start, format = "%d/%m/%Y") + 1),
+         `episodes per day` = round(episodes / as.numeric(days), 2),
+         `hours per day` = round(runtime / as.numeric(days), 2)) |> 
+  select(campaign, start, end, days, `episodes per day`, `hours per day`) |> 
+  datatable(class = c("stripe", "hover"),
+            rownames = F,
+            colnames = c("Campaign", "Start date", "End date", "Days", "Episodes (per day)", 
+                         "Hours (per day)"),
+            options = list(dom = 't',
+                           columnDefs = list(
+                             list(className = "dt-right", width = "10%", targets = 0),
+                             list(className = "dt-center", width = "20%", targets = 1:2),
+                             list(className = "dt-center", width = "10%", targets = 3),
+                             list(className = "dt-center", width = "20%", targets = 4:5)
+                           )))
+
+```
+
+## Critical Role 24/7 {.smaller}
+
+If you did not eat or sleep, it would take $x$ days to watch all available episodes of Critical
+Role's main campaigns.
+
+## Critical Role 24/7 {.smaller}
+If you did not eat or sleep, it would take $x$ days to watch all available episodes of Critical
+Role's main campaigns.
+
+\begin{aligned}
+
+x &= \frac{453 + 566 + 508 + 148}{24} \\
+  &= \frac{1675}{24} \\
+  &= 69.79167 \\
+  &\approx 70
+
+\end{aligned}
+
+It would take nearly 70 days, or 10 weeks. 
+
+## References
+
+::: {#refs}
+:::
