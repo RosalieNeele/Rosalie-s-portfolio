@@ -2,9 +2,7 @@
 output: github_document
 ---
 
-This project contains a simulation study about measurement error, conducted using R and RStudio. The main project folder contains a renv.lock file to ensure reproducibility. The packages used include: 
-renv, Hmisc, mice, and tidyverse. The package environment can be restored using the renv::restore()
-function from the renv package. All analysis can be run by rendering the main analysis script ("Exercise 2.qmd"). 
+This project contains a simulation study about measurement error, conducted by Boulesteix et al. (2020) in their study on the 'Introduction to statistical simulations in health research'. The main project folder contains a renv.lock file to ensure reproducibility. The packages used include: renv, Hmisc, mice, and tidyverse. The package environment can be restored using the renv::restore() function from the renv package. All analysis can be run by rendering the main analysis script ("Exercise 2.qmd"). 
 
 The project contains the following folders: 
 
