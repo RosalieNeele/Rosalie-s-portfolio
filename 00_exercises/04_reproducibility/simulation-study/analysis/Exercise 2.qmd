@@ -1,0 +1,204 @@
+---
+title: "Exercise 2"
+format: 
+  pdf: default
+author: "Rosalie Neele"
+---
+
+```{r library}
+#| output: false
+
+library(renv)
+library(Hmisc)
+library(mice)
+library(tidyverse)
+
+```
+
+
+## Data
+Data from the NHANES 2015-2016 was used in the current study. The data can be obtained through the [CDC](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2015). Five datasets were used to combine demographic, examination, and laboratory data. The subsection where the data file and codebook can be found is included for each dataset. 
+
+- DEMO_I.xpt: Demographic Variables and Sample Weights ([Demographics Data](https://wwwn.cdc.gov/nchs/nhanes/search/datapage.aspx?Component=Demographics&CycleBeginYear=2015))
+
+- BPX_I.xpt: Blood Pressure ([Examination Data](https://wwwn.cdc.gov/nchs/nhanes/search/datapage.aspx?Component=Examination&CycleBeginYear=2015))
+
+- BMX_I.xpt: Body Measures ([Examination Data](https://wwwn.cdc.gov/nchs/nhanes/search/datapage.aspx?Component=Examination&CycleBeginYear=2015))
+
+- GHB_I.xpt: Glycohemoglobin ([Laboratory Data](https://wwwn.cdc.gov/nchs/nhanes/search/datapage.aspx?Component=Laboratory&CycleBeginYear=2015))
+
+- TCHOL_I.xpt: Cholesterol - Total ([Laboratory Data](https://wwwn.cdc.gov/nchs/nhanes/search/datapage.aspx?Component=Laboratory&CycleBeginYear=2015))
+
+
+```{r data}
+#| output: false
+
+# load data files
+d1 <- sasxport.get("../data/raw/DEMO_I.xpt")
+d2 <- sasxport.get("../data/raw/BPX_I.xpt")
+d3 <- sasxport.get("../data/raw/BMX_I.xpt")
+d4 <- sasxport.get("../data/raw/GHB_I.xpt")
+d5 <- sasxport.get("../data/raw/TCHOL_I.xpt")
+
+```
+
+## Data pre-processing
+### Select relevant variables
+Note that for gender a value of 1 indicates male, and 2 indicates female. 
+
+```{r subsetting}
+
+# select relevant variables
+d1.t <- subset(d1, select = c("seqn","riagendr","ridageyr"))  # ID, gender, age 
+d2.t <- subset(d2, select = c("seqn","bpxsy1"))               # ID, systolic blood pressure
+d3.t <- subset(d3, select = c("seqn","bmxbmi"))               # ID, BMI
+d4.t <- subset(d4, select = c("seqn","lbxgh"))                # ID, glycohemoglobin
+d5.t <- subset(d5, select = c("seqn","lbdtcsi"))              # ID, total cholesterol 
+
+```
+
+### Merge data
+
+```{r merge data}
+
+# merge data sets by participant ID (seqn)
+data <- merge(d1.t, d2.t, by = "seqn") |> 
+  merge(d3.t, by = "seqn") |> 
+  merge(d4.t, by = "seqn") |> 
+  merge(d5.t, by = "seqn")
+
+```
+
+### Data pre-processing
+
+```{r preprocessing}
+#| file: "../scripts/preprocessing.R"
+#| eval: true
+#| echo: true
+```
+
+```{r apply preprocessing}
+
+# apply pre-process function to data
+data_clean <- preprocess(data)
+
+# save clean data to file
+write_csv(data_clean, "../data/clean/data_clean.csv")
+
+```
+
+
+## Analysis
+
+```{r models}
+#| output: false
+
+# linear model 1
+m1 <- lm(bp ~ HbA1C + age + sex, data = data_clean)
+
+# linear model 2
+m2 <- lm(bp ~ HbA1C + bmi + age + sex, data = data_clean)
+
+```
+
+### Summary of model 1 and 2
+
+```{r model results}
+
+# model 1
+summary(m1)         # results
+confint(m1)         # confidence interval 
+
+# model 2 
+summary(m2)         # results
+confint(m2)         # confidence interval 
+
+```
+
+
+## Simulation of measurement error
+A different seed was set for each simulation. Each seed corresponds to the simulation number. For example, the first simulation used a seed of 1, the second a seed of 2, the third a seed of 3, etc. A total of 1000 simulations were run. 
+
+```{r simulation}
+#| output: false
+
+# reference value
+ref <- m2$coef[2]
+
+# number of simulations
+n.sim <- 1e3
+
+# number of rows
+n <- dim(data_clean)[1]
+
+# create scenarios
+perc.me.exp <- seq(0, .5, .1) # 0 to 0.5 in steps of 0.1
+perc.me.conf<- seq(0, .5, .1)
+scenarios <- expand.grid(perc.me.exp, perc.me.conf)
+
+n.dim <- dim(scenarios)[1]
+
+var.exp <- var(data_clean$HbA1C)
+var.conf <- var(data_clean$bmi)
+beta.hat <- matrix(ncol = n.dim, nrow = n.sim)
+
+# run 1000 simulations
+for (k in 1:n.sim){
+  
+  # set seed to corresponding simulation number
+  set.seed(k)
+  
+  # run simulation for each scenario
+  for (i in 1:n.dim){
+    var.me.exp <- var.exp*scenarios[i,1]/(1-scenarios[i,1])
+    var.me.conf <- var.conf*scenarios[i,2]/(1-scenarios[i,2])
+    data_clean$HbA1C.me <- data_clean$HbA1C + rnorm(dim(data_clean)[1], 0, sqrt(var.me.exp) )
+    data_clean$bmi.me <- data_clean$bmi + rnorm(dim(data_clean)[1], 0, sqrt(var.me.conf) )
+    beta.hat[k,i] <- lm(bp ~ HbA1C.me + age + bmi.me + sex, data = data_clean)$coef[2]
+  }
+}
+
+```
+
+
+## Results
+This simulation study shows that an increase in the percentage of measurement error of HbA1c leads to an decrease in the regression estimate, while an increase in the percentage of measurement error of BMI leads to an increase in the regression estimate. Note that the estimates are averaged over the 1000 simulations. The results suggest that measurement error in the outcome, HbA1c, leads to an underestimation of the estimate, while measurement error in BMI leads to an overestimation of the estimate. 
+
+```{r figure}
+
+tot.mat <- cbind(100*scenarios,apply(beta.hat, 2, mean))
+colnames(tot.mat) <- c("me.exp","me.conf","estimate")
+
+FIGURE <- ggplot(tot.mat, aes(me.exp, me.conf)) +
+  geom_tile(color="white",aes(fill = estimate)) +
+  geom_text(aes(label = round(estimate, 2))) +
+  scale_fill_gradient2(low="#D55E00",mid="white",high = "#56B4E9", midpoint=ref) +
+  labs(x=paste("% of total variance of HbA1c due to measurement error"),
+       y=paste("% of total variance of BMI due to measurement error")) +
+  coord_equal()+
+  scale_y_continuous(breaks=unique(tot.mat[,2]))+
+  scale_x_continuous(breaks=unique(tot.mat[,1]))+
+  theme(panel.background = element_rect(fill='white', colour='grey'),
+        plot.title=element_text(hjust=0),
+        axis.title=element_text(size=12),
+        axis.text=element_text(size=10),
+        legend.title=element_text(size=12),
+        legend.text=element_text(size=10))
+
+FIGURE
+
+```
+
+```{r save figure}
+#| output: false
+
+# save figure to file
+ggsave(filename = "../figures/Figure_STRATOS.tif", 
+       plot = FIGURE,
+       device = "tiff", 
+       width = 10, 
+       height = 10, 
+       units = "cm")
+
+```
+
