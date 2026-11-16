@@ -1,0 +1,69 @@
+---
+title: "My Reproducible Manuscript"
+author: "Rosalie Neele"
+format: 
+  pdf: default
+bibliography: references.bib
+---
+
+```{r packages, message = F}
+
+# Load penguins
+library(ggplot2)
+
+```
+
+
+## Meet Quarto
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org.>
+
+## Meet the penguins
+The `penguins` data from the [palmerpenguins](https://allisonhorst.github.io/palmerpenguins/) package by @PalmerPenguins contains size measurements for 344 penguins from three species observed on three islands in the Palmer Archipelago, Antarctica [@PalmerPenguins].
+
+![](https://allisonhorst.github.io/palmerpenguins/reference/figures/lter_penguins.png)
+
+## Results
+
+```{r results, warning = F}
+#| echo: false
+
+# Read data
+penguins <- read.csv("../data/data.csv")
+
+# Plot penguins
+ggplot(penguins, 
+       aes(x = `Flipper.Length..mm.`, y = `Culmen.Length..mm.`)) +
+        geom_point(aes(color = Species, shape = Species)) +
+        scale_color_manual(values = c("darkorange","purple","cyan4")) +
+        labs(
+                title = "Flipper and Culmen length",
+                subtitle = "Dimensions for penguins at Palmer Station LTER",
+                x = "Flipper length (mm)", y = "Culmen length (mm)",
+                color = "Penguin species", shape = "Penguin species"
+        ) +
+        theme_minimal()
+
+```
+
+## Calculations
+
+- Simple calculation: adding 25 to 25 equals `r sum(25, 25)`
+- Simple calculation p2: adding 5 to 5 equals `r sum(5, 5)`
+- Number of “Gentoo” and “Chinstrap” species of penguins within the data are 
+`r sum(penguins$Species == "Gentoo penguin (Pygoscelis papua)")` and 
+`r sum(penguins$Species == "Chinstrap penguin (Pygoscelis antarctica)")` respectively. 
+
+
+```{r}
+#| file: "../scripts/do_addition.R"
+#| eval: true
+#| echo: true
+
+```
+
+```{r}
+
+do_addition(5, 5)
+
+```
+
